@@ -20,12 +20,15 @@ namespace RM
 {
 	extern cv::VideoCapture vedio_stream;
 
-	extern std::vector<cv::Point2f> resrvd_ft;
-	extern std::vector<cv::Point2f> cur_ft;
+	extern std::vector<cv::KeyPoint> resrvd_kp;
+	extern cv::Mat resrvd_dpt;
+	extern std::vector<cv::KeyPoint> cur_kp;
+	extern cv::Mat cur_dpt;
 
 	extern cv::Mat last_frame;//Gray image.
 	extern cv::Mat cur_frame;
 
+	extern cv::SurfFeatureDetector surf_dtr;
 	
 	
 

@@ -4,11 +4,18 @@
 namespace RM
 {
 	cv::VideoCapture vedio_stream;
-	std::vector<cv::Point2f> resrvd_ft;
-	std::vector<cv::Point2f> cur_ft;
+
+	std::vector<cv::KeyPoint> resrvd_kp;
+	cv::Mat resrvd_dpt;
+	std::vector<cv::KeyPoint> cur_kp;
+	cv::Mat cur_dpt;
 
 	cv::Mat last_frame;//Gray image.
 	cv::Mat cur_frame;
+
+	cv::SurfFeatureDetector surf_dtr=cv::SurfFeatureDetector(2500);
+
+
 	
 	void img_init(cv::Mat& src)
 	{
@@ -203,6 +210,7 @@ namespace RM
 	void extract_ft(const cv::RotatedRect& sample)
 	{
 		cv::Mat roi;
+		
 		cv::Rect b_rect=sample.boundingRect();
 		if(b_rect.x<0)
 			b_rect.x=0;
@@ -214,44 +222,95 @@ namespace RM
 		cv::imshow("roi",roi);
 		cv::waitKey(1);
 	
-		cv::goodFeaturesToTrack(roi,resrvd_ft,100,0.01,10);
 
+
+		surf_dtr.detect(roi,resrvd_kp);
+		for(int i=0;i<resrvd_kp.size()/2;i++)
+			resrvd_kp.pop_back();
+		for(int i=0;i<resrvd_kp.size()/2;i++)
+			resrvd_kp.pop_back();
+		for(int i=0;i<resrvd_kp.size()/2;i++)
+			resrvd_kp.pop_back();
+
+		surf_dtr.compute(roi,resrvd_kp,resrvd_dpt);
+
+	/*
 		//Position correction.
 		for(int i=0;i<resrvd_ft.size();i++)
 		{	
 			resrvd_ft[i].x+=sample.boundingRect().x;
 			resrvd_ft[i].y+=sample.boundingRect().y;
 		}
-	
+*/	
 	}
 
 	void match_ft(std::vector<cv::RotatedRect>& tars)
 	{
-		cv::RotatedRect res;
-		std::vector<uchar> status; 
-		std::vector<float> err;
-		cv::calcOpticalFlowPyrLK(last_frame,cur_frame,resrvd_ft,cur_ft,status,err);
+		surf_dtr.detect(cur_frame,cur_kp);
 		
-		if(cur_ft.size()>=5)
-			res=cv::fitEllipse(cur_ft);
+		for(int i=0;i<cur_kp.size()/2;i++)
+			cur_kp.pop_back();
+		for(int i=0;i<cur_kp.size()/2;i++)
+			cur_kp.pop_back();
+		for(int i=0;i<cur_kp.size()/2;i++)
+			cur_kp.pop_back();
+
+		surf_dtr.compute(cur_frame,cur_kp,cur_dpt);
+
+		
+
+		cv::FlannBasedMatcher matcher;
+		std::vector<cv::DMatch> matches;
+		
+		matcher.match(cur_dpt,resrvd_dpt,matches);
+
+		double max_dist=0;
+		double min_dist=100;
+		for(int i=0;i<matches.size();i++)
+		{
+			double dist=matches[i].distance;
+			if(dist<min_dist)
+				min_dist=dist;
+			if(dist>max_dist)
+				max_dist=dist;
+		}
+
+		std::vector<cv::DMatch> op_matches;
+		std::vector<cv::Point2f> op_tars;
+
+		for(int i=0;i<matches.size();i++)
+		{
+			if(matches[i].distance<3*min_dist)
+			{
+				op_matches.push_back(matches[i]);
+				op_tars.push_back(cur_kp[matches[i].queryIdx].pt);
+			}
+		}
+		
+
+
+		cv::RotatedRect res;
+		
+		if(op_tars.size()>=5)
+			res=cv::fitEllipse(op_tars);
 		else
-			while(cur_ft.size()<5)
+			while(op_tars.size()<5)
 			{
 				cv::Point2f ps[4];
-				ps[0].x=cur_ft[0].x+2;
-				ps[0].y=cur_ft[0].x+2;
-				ps[1].x=cur_ft[0].x+2;
-				ps[1].y=cur_ft[0].x-2;
-				ps[2].x=cur_ft[0].x-2;
-				ps[2].y=cur_ft[0].x-2;
-				ps[3].x=cur_ft[0].x-2;
-				ps[3].y=cur_ft[0].x+2;
+				ps[0].x=op_tars[0].x+2;
+				ps[0].y=op_tars[0].x+2;
+				ps[1].x=op_tars[0].x+2;
+				ps[1].y=op_tars[0].x-2;
+				ps[2].x=op_tars[0].x-2;
+				ps[2].y=op_tars[0].x-2;
+				ps[3].x=op_tars[0].x-2;
+				ps[3].y=op_tars[0].x+2;
 				for(int i=0;i<4;i++)
-					cur_ft.push_back(ps[i]);
-				res=cv::fitEllipse(cur_ft);
+					op_tars.push_back(ps[i]);
+				res=cv::fitEllipse(op_tars);
 			}
 
 		tars.push_back(res);
-		cur_ft.clear();
+		op_tars.clear();
 	}
 }
