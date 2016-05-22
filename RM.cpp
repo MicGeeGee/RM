@@ -225,36 +225,20 @@ namespace RM
 
 
 		surf_dtr.detect(roi,resrvd_kp);
-		for(int i=0;i<resrvd_kp.size()/2;i++)
+		int pop_num=resrvd_kp.size()/2;
+		for(int i=0;i<pop_num;i++)
 			resrvd_kp.pop_back();
-		for(int i=0;i<resrvd_kp.size()/2;i++)
-			resrvd_kp.pop_back();
-		for(int i=0;i<resrvd_kp.size()/2;i++)
-			resrvd_kp.pop_back();
-
 		surf_dtr.compute(roi,resrvd_kp,resrvd_dpt);
 
-	/*
-		//Position correction.
-		for(int i=0;i<resrvd_ft.size();i++)
-		{	
-			resrvd_ft[i].x+=sample.boundingRect().x;
-			resrvd_ft[i].y+=sample.boundingRect().y;
-		}
-*/	
+
 	}
 
 	void match_ft(std::vector<cv::RotatedRect>& tars)
 	{
 		surf_dtr.detect(cur_frame,cur_kp);
-		
-		for(int i=0;i<cur_kp.size()/2;i++)
+		int pop_num=cur_kp.size()/2;
+		for(int i=0;i<pop_num;i++)
 			cur_kp.pop_back();
-		for(int i=0;i<cur_kp.size()/2;i++)
-			cur_kp.pop_back();
-		for(int i=0;i<cur_kp.size()/2;i++)
-			cur_kp.pop_back();
-
 		surf_dtr.compute(cur_frame,cur_kp,cur_dpt);
 
 		
